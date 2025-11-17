@@ -58,7 +58,6 @@
   }
   #exportBtn:hover { background: #333; }
 
-  /* Config form at bottom */
   #configForm {
     margin-top: 20px;
     display: flex;
@@ -92,7 +91,8 @@
 
 <form id="configForm">
   <label>Steps: <input type="number" id="stepsInput" value="8" min="1"></label>
-  <label>Group: <input type="number" id="shadeInput" value="2" min="1"></label>
+  <label>Shade Group: <input type="number" id="shadeInput" value="2" min="1"></label>
+  <button type="submit">Apply</button>
 </form>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -225,44 +225,47 @@ function toggleCell(symbolOverride = null) {
 // KEY EVENTS
 // ======================================================
 document.addEventListener("keydown", e => {
+  // Prevent scrolling for space and arrow keys
+  if (e.key === " " || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+  }
+
   let changed = false;
 
   switch (e.key) {
-    case "ArrowUp":    cursor.row = Math.max(0, cursor.row - 1); changed = true; break;
-    case "ArrowDown":  cursor.row = Math.min(ROWS.length - 1, cursor.row + 1); changed = true; break;
-    case "ArrowLeft":  cursor.col = Math.max(0, cursor.col - 1); changed = true; break;
+    case "ArrowUp": cursor.row = Math.max(0, cursor.row - 1); changed = true; break;
+    case "ArrowDown": cursor.row = Math.min(ROWS.length - 1, cursor.row + 1); changed = true; break;
+    case "ArrowLeft": cursor.col = Math.max(0, cursor.col - 1); changed = true; break;
     case "ArrowRight": cursor.col = Math.min(CONFIG.steps - 1, cursor.col + 1); changed = true; break;
     case " ": toggleCell(); changed = true; break;
     default:
-      if (ALT_SYMBOLS[e.key]) {
-        toggleCell(ALT_SYMBOLS[e.key]);
-        changed = true;
-      }
+      if (ALT_SYMBOLS[e.key]) { toggleCell(ALT_SYMBOLS[e.key]); changed = true; }
   }
 
   if (changed) render();
 });
 
 // ======================================================
-// CONFIG FORM DYNAMICALLY UPDATES GRID
+// CONFIG FORM WITH SUBMIT BUTTON
 // ======================================================
+const configForm = document.getElementById("configForm");
 const stepsInput = document.getElementById("stepsInput");
 const shadeInput = document.getElementById("shadeInput");
 
-function updateConfig() {
+configForm.addEventListener("submit", e => {
+  e.preventDefault();
+
   const newSteps = parseInt(stepsInput.value, 10);
   const newShade = parseInt(shadeInput.value, 10);
 
   if (!isNaN(newSteps) && newSteps > 0) CONFIG.steps = newSteps;
   if (!isNaN(newShade) && newShade > 0) CONFIG.shadeGroup = newShade;
 
+  // Reinitialize grid
   gridData = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
-  cursor.col = 0; // reset cursor
+  cursor.col = 0;
   render();
-}
-
-stepsInput.addEventListener("input", updateConfig);
-shadeInput.addEventListener("input", updateConfig);
+});
 
 // ======================================================
 // INITIAL RENDER
