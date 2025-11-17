@@ -7,4 +7,4 @@ Drum parts can be disabled if desired.
 Try it here:
 https://woodypianoshack.github.io/drumtab/
 
-Use however you want but credit Woody Piano Shack if you use in your content, cheers!
+Credit "Woody Piano Shack" if you use this tool in your content, cheers!
