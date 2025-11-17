@@ -57,6 +57,27 @@
     border-radius: 5px;
   }
   #exportBtn:hover { background: #333; }
+
+  /* Config form at bottom */
+  #configForm {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  #configForm input {
+    width: 60px;
+    padding: 2px 4px;
+  }
+  #configForm button {
+    padding: 5px 10px;
+    cursor: pointer;
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+  }
+  #configForm button:hover { background: #333; }
 </style>
 </head>
 
@@ -69,11 +90,16 @@
 
 <button id="exportBtn">Export image</button>
 
+<form id="configForm">
+  <label>Steps: <input type="number" id="stepsInput" value="8" min="1"></label>
+  <label>Group: <input type="number" id="shadeInput" value="2" min="1"></label>
+</form>
+
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <script>
 // ======================================================
-// CONFIG (all visual + functional tuning centralised)
+// CONFIG
 // ======================================================
 const CONFIG = {
   steps: 8,
@@ -88,9 +114,6 @@ const CONFIG = {
 
 // ======================================================
 // ROW DEFINITIONS
-// label = UI label
-// hit   = default note symbol
-// color = note color
 // ======================================================
 const ROWS = [
   { id: "CY", label: "CY", hit: "×", color: "#00AA22" },
@@ -209,13 +232,7 @@ document.addEventListener("keydown", e => {
     case "ArrowDown":  cursor.row = Math.min(ROWS.length - 1, cursor.row + 1); changed = true; break;
     case "ArrowLeft":  cursor.col = Math.max(0, cursor.col - 1); changed = true; break;
     case "ArrowRight": cursor.col = Math.min(CONFIG.steps - 1, cursor.col + 1); changed = true; break;
-
-    case " ":
-      toggleCell();
-      changed = true;
-      break;
-
-    // alternate symbols
+    case " ": toggleCell(); changed = true; break;
     default:
       if (ALT_SYMBOLS[e.key]) {
         toggleCell(ALT_SYMBOLS[e.key]);
@@ -223,11 +240,29 @@ document.addEventListener("keydown", e => {
       }
   }
 
-  if (changed) {
-    render();
-    e.preventDefault();
-  }
+  if (changed) render();
 });
+
+// ======================================================
+// CONFIG FORM DYNAMICALLY UPDATES GRID
+// ======================================================
+const stepsInput = document.getElementById("stepsInput");
+const shadeInput = document.getElementById("shadeInput");
+
+function updateConfig() {
+  const newSteps = parseInt(stepsInput.value, 10);
+  const newShade = parseInt(shadeInput.value, 10);
+
+  if (!isNaN(newSteps) && newSteps > 0) CONFIG.steps = newSteps;
+  if (!isNaN(newShade) && newShade > 0) CONFIG.shadeGroup = newShade;
+
+  gridData = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
+  cursor.col = 0; // reset cursor
+  render();
+}
+
+stepsInput.addEventListener("input", updateConfig);
+shadeInput.addEventListener("input", updateConfig);
 
 // ======================================================
 // INITIAL RENDER
@@ -248,7 +283,6 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   clone.style.padding = "10px";
   clone.style.background = "#111";
 
-  // Remove cursor and restore shading
   clone.querySelectorAll(".cell").forEach((el, index) => {
     const r = Math.floor(index / CONFIG.steps);
     el.style.background = Math.floor(index % CONFIG.steps / CONFIG.shadeGroup) % 2 === 0
