@@ -60,9 +60,6 @@
 
   #configForm {
     margin-top: 20px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
   }
   #configForm input {
     width: 60px;
@@ -91,7 +88,18 @@
 
 <form id="configForm">
   <label>Steps: <input type="number" id="stepsInput" value="8" min="1"></label>
-  <label>Shade Group: <input type="number" id="shadeInput" value="2" min="1"></label>
+  <label>Group: <input type="number" id="shadeInput" value="2" min="1"></label>
+
+  <!-- Simple inline checkboxes for rows -->
+  <br>
+  <label><input type="checkbox" name="row" value="CY" checked>CY</label><br>
+  <label><input type="checkbox" name="row" value="HT" checked>HT</label><br>
+  <label><input type="checkbox" name="row" value="MT" checked>MT</label><br>
+  <label><input type="checkbox" name="row" value="LT" checked>LT</label><br>
+  <label><input type="checkbox" name="row" value="SD" checked>SD</label><br>
+  <label><input type="checkbox" name="row" value="BD" checked>BD</label><br>
+  
+  <br> 
   <button type="submit">Apply</button>
 </form>
 
@@ -115,7 +123,7 @@ const CONFIG = {
 // ======================================================
 // ROW DEFINITIONS
 // ======================================================
-const ROWS = [
+const ALL_ROWS = [
   { id: "CY", label: "CY", hit: "×", color: "#00AA22" },
   { id: "HT", label: "HT", hit: "●", color: "#DD9900" },
   { id: "MT", label: "MT", hit: "●", color: "#DD9900" },
@@ -139,6 +147,7 @@ const ALT_SYMBOLS = {
 // ======================================================
 // STATE
 // ======================================================
+let ROWS = ALL_ROWS.slice();
 let gridData = Array.from({ length: ROWS.length }, () =>
   Array(CONFIG.steps).fill("")
 );
@@ -225,7 +234,6 @@ function toggleCell(symbolOverride = null) {
 // KEY EVENTS
 // ======================================================
 document.addEventListener("keydown", e => {
-  // Prevent scrolling for space and arrow keys
   if (e.key === " " || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
     e.preventDefault();
   }
@@ -246,11 +254,12 @@ document.addEventListener("keydown", e => {
 });
 
 // ======================================================
-// CONFIG FORM WITH SUBMIT BUTTON
+// CONFIG FORM WITH SUBMIT BUTTON + ROW CHECKBOXES
 // ======================================================
 const configForm = document.getElementById("configForm");
 const stepsInput = document.getElementById("stepsInput");
 const shadeInput = document.getElementById("shadeInput");
+const rowCheckboxes = document.querySelectorAll('input[name="row"]');
 
 configForm.addEventListener("submit", e => {
   e.preventDefault();
@@ -261,9 +270,17 @@ configForm.addEventListener("submit", e => {
   if (!isNaN(newSteps) && newSteps > 0) CONFIG.steps = newSteps;
   if (!isNaN(newShade) && newShade > 0) CONFIG.shadeGroup = newShade;
 
+  // Update which rows are visible
+  ROWS = ALL_ROWS.filter(r => {
+    const cb = Array.from(rowCheckboxes).find(c => c.value === r.id);
+    return cb.checked;
+  });
+
   // Reinitialize grid
   gridData = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
+  cursor.row = 0;
   cursor.col = 0;
+
   render();
 });
 
@@ -297,7 +314,7 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   document.body.appendChild(clone);
 
   const now = new Date();
-  const pad = n => String(n).padStart(2, "0");
+  const pad = n => String(n).padStart(2,"0");
   const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
 
   html2canvas(clone, { scale: 4 }).then(canvas => {
