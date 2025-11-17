@@ -27,69 +27,82 @@
       height: 40px;
       padding-right: 8px;
       text-align: right;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
-      color: #888;
+      color: #777;
     }
 
     .grid {
       display: grid;
-      border: 2px solid #333;
-      border-right: none;
-      border-bottom: none;
     }
 
     .cell {
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 24px;
+      font-size: 26px;
       box-sizing: border-box;
       border-right: 2px solid #333;
       border-bottom: 2px solid #333;
-      transition: background 0.1s ease-out;
     }
 
-    button,
-    input[type="number"] {
+    #exportBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #222;
+      color: #eee;
+      border: 2px solid #555;
+      border-radius: 5px;
+    }
+
+    #exportBtn:hover {
+      background: #333;
+    }
+
+    #configForm {
+      margin-top: 20px;
+    }
+
+    #configForm input {
+      width: 60px;
+      padding: 2px 4px;
+    }
+
+    #configForm button {
+      padding: 5px 10px;
+      cursor: pointer;
       background: #222;
       color: #eee;
       border: 1px solid #555;
       border-radius: 4px;
-      padding: 6px 10px;
-      margin-top: 10px;
     }
 
-    button:hover {
-      background: #333;
-      cursor: pointer;
-    }
-
-    #configForm label {
-      display: block;
-      margin-top: 6px;
-    }
+    #configForm button:hover { background: #333; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div id="labels" class="labels"></div>
-    <div id="grid" class="grid"></div>
+    <div class="labels" id="labels"></div>
+    <div class="grid" id="grid"></div>
   </div>
 
-  <button id="exportBtn">Export Image</button>
+  <button id="exportBtn">Export image</button>
 
   <form id="configForm">
-    <label>Steps <input type="number" id="stepsInput" value="8" min="1"></label>
-    <label>Group <input type="number" id="shadeInput" value="2" min="1"></label>
+    <label>Steps: <input type="number" id="stepsInput" value="8" min="1"></label>
+    <label>Group: <input type="number" id="shadeInput" value="2" min="1"></label>
 
-    <label><input type="checkbox" name="row" value="CY" checked> CY</label>
-    <label><input type="checkbox" name="row" value="HT" checked> HT</label>
-    <label><input type="checkbox" name="row" value="MT" checked> MT</label>
-    <label><input type="checkbox" name="row" value="LT" checked> LT</label>
-    <label><input type="checkbox" name="row" value="SD" checked> SD</label>
-    <label><input type="checkbox" name="row" value="BD" checked> BD</label>
+    <br>
+    <label><input type="checkbox" name="row" value="CY" checked>CY</label><br>
+    <label><input type="checkbox" name="row" value="HT" checked>HT</label><br>
+    <label><input type="checkbox" name="row" value="MT" checked>MT</label><br>
+    <label><input type="checkbox" name="row" value="LT" checked>LT</label><br>
+    <label><input type="checkbox" name="row" value="SD" checked>SD</label><br>
+    <label><input type="checkbox" name="row" value="BD" checked>BD</label><br>
 
+    <br>
     <button type="submit">Apply</button>
   </form>
 
@@ -99,15 +112,12 @@
     const CONFIG = {
       steps: 8,
       shadeGroup: 2,
-      w: 40,
-      h: 40,
-      colors: {
-        border: "#333",
-        empty: "#888",
-        shadeA: "#1b1b1b",
-        shadeB: "#111",
-        cursor: "#063"
-      }
+      cellWidth: 40,
+      cellHeight: 40,
+      borderColor: "#333",
+      emptyColor: "#eee",
+      shadeColor: "#1b1b1b",
+      cursorColor: "#005200"
     };
 
     const ALL_ROWS = [
@@ -115,51 +125,58 @@
       { id: "HT", label: "HT", hit: "●", color: "#DD9900" },
       { id: "MT", label: "MT", hit: "●", color: "#DD9900" },
       { id: "LT", label: "LT", hit: "●", color: "#DD9900" },
-      { id: "SD", label: "SD", hit: "●", color: "#0066FF" },
+      { id: "SD", label: "SD", hit: "●", color: "#0000DD" },
       { id: "BD", label: "BD", hit: "●", color: "#CC0000" }
     ];
 
-    const ALT = { 1: "●", 2: "×", 3: "○", 4: "✶", 5: "◇", 6: "+" };
+    const ALT_SYMBOLS = { 1: "●", 2: "×", 3: "○", 4: "✶", 5: "◇", 6: "+" };
 
     let ROWS = [...ALL_ROWS];
-    let grid = [];
-    let cursor = { r: 0, c: 0 };
+    let gridData = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
+    let cursor = { row: 0, col: 0 };
+    let cursorVisible = true;
 
     const labelsEl = document.getElementById("labels");
     const gridEl = document.getElementById("grid");
 
-    function initGrid() {
-      grid = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
-    }
-
     function renderLabels() {
-      labelsEl.innerHTML = ROWS.map(r => `<div class="label">${r.label}</div>`).join("");
+      labelsEl.innerHTML = "";
+      ROWS.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "label";
+        div.textContent = r.label;
+        labelsEl.appendChild(div);
+      });
     }
 
     function renderGrid() {
       gridEl.innerHTML = "";
-      gridEl.style.gridTemplateColumns = `repeat(${CONFIG.steps}, ${CONFIG.w}px)`;
-      gridEl.style.gridTemplateRows = `repeat(${ROWS.length}, ${CONFIG.h}px)`;
+      gridEl.style.gridTemplateColumns = `repeat(${CONFIG.steps}, ${CONFIG.cellWidth}px)`;
+      gridEl.style.gridTemplateRows = `repeat(${ROWS.length}, ${CONFIG.cellHeight}px)`;
 
-      ROWS.forEach((_, r) => {
+      for (let r = 0; r < ROWS.length; r++) {
         for (let c = 0; c < CONFIG.steps; c++) {
           const cell = document.createElement("div");
           cell.className = "cell";
-          cell.style.width = CONFIG.w + "px";
-          cell.style.height = CONFIG.h + "px";
+          cell.style.width = CONFIG.cellWidth + "px";
+          cell.style.height = CONFIG.cellHeight + "px";
 
           const shaded = Math.floor(c / CONFIG.shadeGroup) % 2 === 0;
+          cell.style.background = shaded ? CONFIG.shadeColor : "#111";
 
-          cell.style.background = shaded ? CONFIG.colors.shadeA : CONFIG.colors.shadeB;
-          if (cursor.r === r && cursor.c === c) cell.style.background = CONFIG.colors.cursor;
+          if (cursorVisible && cursor.row === r && cursor.col === c)
+            cell.style.background = CONFIG.cursorColor;
 
-          const sym = grid[r][c];
-          cell.textContent = sym;
-          cell.style.color = sym ? ROWS[r].color : CONFIG.colors.empty;
+          if (r === 0) cell.style.borderTop = `2px solid ${CONFIG.borderColor}`;
+          if (c === 0) cell.style.borderLeft = `2px solid ${CONFIG.borderColor}`;
+
+          const symbol = gridData[r][c];
+          cell.textContent = symbol;
+          cell.style.color = symbol ? ROWS[r].color : CONFIG.emptyColor;
 
           gridEl.appendChild(cell);
         }
-      });
+      }
     }
 
     function render() {
@@ -167,61 +184,80 @@
       renderGrid();
     }
 
-    function toggle(symbol = null) {
-      const row = ROWS[cursor.r];
-      const sym = symbol || row.hit;
-      grid[cursor.r][cursor.c] = grid[cursor.r][cursor.c] === sym ? "" : sym;
+    function toggleCell(symbolOverride = null) {
+      const r = cursor.row;
+      const c = cursor.col;
+      const row = ROWS[r];
+      const symbol = symbolOverride || row.hit;
+
+      gridData[r][c] = gridData[r][c] === symbol ? "" : symbol;
       render();
     }
 
     document.addEventListener("keydown", e => {
-      const k = e.key;
-      if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) e.preventDefault();
+      if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
+        e.preventDefault();
 
-      const moves = {
-        ArrowUp: () => cursor.r = Math.max(0, cursor.r - 1),
-        ArrowDown: () => cursor.r = Math.min(ROWS.length - 1, cursor.r + 1),
-        ArrowLeft: () => cursor.c = Math.max(0, cursor.c - 1),
-        ArrowRight: () => cursor.c = Math.min(CONFIG.steps - 1, cursor.c + 1),
-        " ": () => toggle()
-      };
-
-      if (moves[k]) moves[k]();
-      else if (ALT[k]) toggle(ALT[k]);
-      else return;
-
-      render();
+      let changed = false;
+      switch (e.key) {
+        case "ArrowUp": cursor.row = Math.max(0, cursor.row - 1); changed = true; break;
+        case "ArrowDown": cursor.row = Math.min(ROWS.length - 1, cursor.row + 1); changed = true; break;
+        case "ArrowLeft": cursor.col = Math.max(0, cursor.col - 1); changed = true; break;
+        case "ArrowRight": cursor.col = Math.min(CONFIG.steps - 1, cursor.col + 1); changed = true; break;
+        case " ": toggleCell(); changed = true; break;
+        default:
+          if (ALT_SYMBOLS[e.key]) { toggleCell(ALT_SYMBOLS[e.key]); changed = true; }
+      }
+      if (changed) render();
     });
 
-    document.getElementById("configForm").addEventListener("submit", e => {
+    const configForm = document.getElementById("configForm");
+    const stepsInput = document.getElementById("stepsInput");
+    const shadeInput = document.getElementById("shadeInput");
+    const rowCheckboxes = document.querySelectorAll('input[name="row"]');
+
+    configForm.addEventListener("submit", e => {
       e.preventDefault();
-
-      CONFIG.steps = Math.max(1, parseInt(stepsInput.value));
-      CONFIG.shadeGroup = Math.max(1, parseInt(shadeInput.value));
-
-      const rows = [...document.querySelectorAll("input[name='row']")]
-        .filter(x => x.checked)
-        .map(x => x.value);
-
-      ROWS = ALL_ROWS.filter(r => rows.includes(r.id));
-
-      cursor = { r: 0, c: 0 };
-      initGrid();
+      const newSteps = parseInt(stepsInput.value, 10);
+      const newShade = parseInt(shadeInput.value, 10);
+      if (!isNaN(newSteps) && newSteps > 0) CONFIG.steps = newSteps;
+      if (!isNaN(newShade) && newShade > 0) CONFIG.shadeGroup = newShade;
+      ROWS = ALL_ROWS.filter(r => {
+        const cb = Array.from(rowCheckboxes).find(c => c.value === r.id);
+        return cb.checked;
+      });
+      gridData = Array.from({ length: ROWS.length }, () => Array(CONFIG.steps).fill(""));
+      cursor = { row: 0, col: 0 };
       render();
     });
+
+    render();
 
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const node = document.querySelector(".container");
-      html2canvas(node, { scale: 4 }).then(canvas => {
+      const original = document.querySelector(".container");
+      const clone = original.cloneNode(true);
+      clone.style.position = "fixed";
+      clone.style.top = "-9999px";
+      clone.style.left = "-9999px";
+      clone.style.background = "#111";
+      clone.style.padding = "10px";
+
+      clone.querySelectorAll(".cell").forEach((el, index) => {
+        const r = Math.floor(index / CONFIG.steps);
+        const shaded = Math.floor(index % CONFIG.steps / CONFIG.shadeGroup) % 2 === 0;
+        el.style.background = shaded ? CONFIG.shadeColor : "#111";
+        el.style.color = el.textContent ? ROWS[r].color : CONFIG.emptyColor;
+      });
+
+      document.body.appendChild(clone);
+      html2canvas(clone, { scale: 4, backgroundColor: null, width: clone.scrollWidth, height: clone.scrollHeight }).then(canvas => {
         const link = document.createElement("a");
-        link.href = canvas.toDataURL();
+        link.href = canvas.toDataURL("image/png");
         link.download = `drum-${Date.now()}.png`;
         link.click();
+        clone.remove();
       });
     });
-
-    initGrid();
-    render();
   </script>
 </body>
 </html>
