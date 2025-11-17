@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Drum Step Editor</title>
+<style>
+  body {
+    font-family: monospace;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+  }
+
+  .container {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .labels {
+    display: flex;
+    flex-direction: column;
+    margin-right: 12px;
+  }
+
+  .label {
+    line-height: 40px;
+    height: 40px;
+    padding-right: 8px;
+    text-align: right;
+    font-size: 20px;
+    font-weight: bold;
+    color: #777;
+  }
+
+  .grid {
+    display: grid;
+  }
+
+  .cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 26px;
+    box-sizing: border-box;
+    border-right: 2px solid #333;
+    border-bottom: 2px solid #333;
+  }
+
+  #exportBtn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #222;
+    color: #eee;
+    border: 2px solid #555;
+    border-radius: 5px;
+  }
+  #exportBtn:hover { background: #333; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="labels" id="labels"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<button id="exportBtn">Export as Image</button>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+// ======================================================
+// CONFIG (all visual + functional tuning centralised)
+// ======================================================
+const CONFIG = {
+  steps: 8,
+  shadeGroup: 2,
+  cellWidth: 40,
+  cellHeight: 40,
+  borderColor: "#333",
+  emptyColor: "#eee",
+  shadeColor: "#1b1b1b",
+  cursorColor: "#006400",
+};
+
+// ======================================================
+// ROW DEFINITIONS
+// label = UI label
+// hit   = default note symbol
+// color = note color
+// ======================================================
+const ROWS = [
+  { id: "CY", label: "CY", hit: "✕", color: "#00AA22" },
+  { id: "SD", label: "SD", hit: "●", color: "#0000CC" },
+  { id: "HT", label: "HT", hit: "●", color: "#FFCC00" },
+  { id: "MT", label: "MT", hit: "●", color: "#FFCC00" },
+  { id: "LT", label: "LT", hit: "●", color: "#FFCC00" },
+  { id: "BD", label: "BD", hit: "●", color: "#CC0000" },
+];
+
+// ======================================================
+// ALT SYMBOL MAP
+// ======================================================
+const ALT_SYMBOLS = {
+  "1": "●",
+  "2": "✕",
+  "3": "○",
+  "4": "✶",
+  "5": "◇",
+  "6": "+"
+};
+
+// ======================================================
+// STATE
+// ======================================================
+let gridData = Array.from({ length: ROWS.length }, () =>
+  Array(CONFIG.steps).fill("")
+);
+
+let cursor = { row: 0, col: 0 };
+let cursorVisible = true;
+
+const labelsEl = document.getElementById("labels");
+const gridEl = document.getElementById("grid");
+
+// ======================================================
+// RENDER LABELS
+// ======================================================
+function renderLabels() {
+  labelsEl.innerHTML = "";
+  ROWS.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "label";
+    div.textContent = r.label;
+    labelsEl.appendChild(div);
+  });
+}
+
+// ======================================================
+// RENDER GRID
+// ======================================================
+function renderGrid() {
+  gridEl.innerHTML = "";
+
+  gridEl.style.gridTemplateColumns = `repeat(${CONFIG.steps}, ${CONFIG.cellWidth}px)`;
+  gridEl.style.gridTemplateRows = `repeat(${ROWS.length}, ${CONFIG.cellHeight}px)`;
+
+  for (let r = 0; r < ROWS.length; r++) {
+    for (let c = 0; c < CONFIG.steps; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.style.width = CONFIG.cellWidth + "px";
+      cell.style.height = CONFIG.cellHeight + "px";
+
+      // Shading groups
+      if (Math.floor(c / CONFIG.shadeGroup) % 2 === 0)
+        cell.style.background = CONFIG.shadeColor;
+      else
+        cell.style.background = "#111";
+
+      // Cursor highlight
+      if (cursorVisible && cursor.row === r && cursor.col === c)
+        cell.style.background = CONFIG.cursorColor;
+
+      // Borders
+      if (r === 0) cell.style.borderTop = `2px solid ${CONFIG.borderColor}`;
+      if (c === 0) cell.style.borderLeft = `2px solid ${CONFIG.borderColor}`;
+
+      // Cell content
+      const symbol = gridData[r][c];
+      cell.textContent = symbol;
+      cell.style.color = symbol ? ROWS[r].color : CONFIG.emptyColor;
+
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+function render() {
+  renderLabels();
+  renderGrid();
+}
+
+// ======================================================
+// TOGGLE CELL
+// ======================================================
+function toggleCell(symbolOverride = null) {
+  const r = cursor.row;
+  const c = cursor.col;
+  const row = ROWS[r];
+
+  const symbol = symbolOverride || row.hit;
+  gridData[r][c] = gridData[r][c] === symbol ? "" : symbol;
+
+  render();
+}
+
+// ======================================================
+// KEY EVENTS
+// ======================================================
+document.addEventListener("keydown", e => {
+  let changed = false;
+
+  switch (e.key) {
+    case "ArrowUp":    cursor.row = Math.max(0, cursor.row - 1); changed = true; break;
+    case "ArrowDown":  cursor.row = Math.min(ROWS.length - 1, cursor.row + 1); changed = true; break;
+    case "ArrowLeft":  cursor.col = Math.max(0, cursor.col - 1); changed = true; break;
+    case "ArrowRight": cursor.col = Math.min(CONFIG.steps - 1, cursor.col + 1); changed = true; break;
+
+    case " ":
+      toggleCell();
+      changed = true;
+      break;
+
+    // alternate symbols
+    default:
+      if (ALT_SYMBOLS[e.key]) {
+        toggleCell(ALT_SYMBOLS[e.key]);
+        changed = true;
+      }
+  }
+
+  if (changed) {
+    render();
+    e.preventDefault();
+  }
+});
+
+// ======================================================
+// INITIAL RENDER
+// ======================================================
+render();
+
+// ======================================================
+// EXPORT IMAGE
+// ======================================================
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const original = document.querySelector(".container");
+  const clone = original.cloneNode(true);
+
+  clone.style.position = "fixed";
+  clone.style.top = "-9999px";
+  clone.style.left = "-9999px";
+  clone.style.border = "5px solid black";
+  clone.style.padding = "10px";
+  clone.style.background = "#111";
+
+  // Remove cursor and restore shading
+  clone.querySelectorAll(".cell").forEach((el, index) => {
+    const r = Math.floor(index / CONFIG.steps);
+    el.style.background = Math.floor(index % CONFIG.steps / CONFIG.shadeGroup) % 2 === 0
+      ? CONFIG.shadeColor
+      : "#111";
+    el.style.color = el.textContent ? ROWS[r].color : CONFIG.emptyColor;
+  });
+
+  document.body.appendChild(clone);
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+
+  html2canvas(clone, { scale: 4 }).then(canvas => {
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `drum-${timestamp}.png`;
+    link.click();
+    clone.remove();
+  });
+});
+</script>
+
+</body>
+</html>
