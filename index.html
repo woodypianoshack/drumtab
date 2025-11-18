@@ -255,7 +255,7 @@
       html2canvas(clone, { scale: 4, backgroundColor: null, width: clone.scrollWidth, height: clone.scrollHeight }).then(canvas => {
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
-        link.download = `drum-${Date.now()}.png`;
+        link.download = `drumedit-${Date.now()}.png`;
         link.click();
         clone.remove();
       });
