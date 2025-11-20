@@ -29,7 +29,7 @@
       text-align: right;
       font-size: 20px;
       font-weight: bold;
-      color: #777;
+      color: #555;
     }
 
     .grid {
@@ -44,6 +44,11 @@
       box-sizing: border-box;
       border-right: 2px solid #333;
       border-bottom: 2px solid #333;
+    }
+
+    .cell.cursor-outline {
+      outline: 1px solid #0f0; /* green outline for cursor */
+      outline-offset: -2px;    /* inset the outline inside the cell */
     }
 
     #exportBtn {
@@ -68,7 +73,7 @@
     #configForm input {
       width: 60px;
       padding: 2px 4px;
-      background-color: #333;   /* dark background */
+      background-color: #333;
       color: #fff;   
     }
 
@@ -123,12 +128,12 @@
     };
 
     const ALL_ROWS = [
-  { id: "CY", label: "CY", hit: "×", color: "#0a2" },
-  { id: "HT", label: "HT", hit: "●", color: "#d90" },
-  { id: "MT", label: "MT", hit: "●", color: "#d90" },
-  { id: "LT", label: "LT", hit: "●", color: "#d90" },
-  { id: "SD", label: "SD", hit: "●", color: "#00d" },
-  { id: "BD", label: "BD", hit: "●", color: "#c00" } 
+      { id: "CY", label: "CY", hit: "×", color: "#0a2" },
+      { id: "HT", label: "HT", hit: "●", color: "#d90" },
+      { id: "MT", label: "MT", hit: "●", color: "#d90" },
+      { id: "LT", label: "LT", hit: "●", color: "#d90" },
+      { id: "SD", label: "SD", hit: "●", color: "#00d" },
+      { id: "BD", label: "BD", hit: "●", color: "#c00" } 
     ];
 
     const ALT_SYMBOLS = { 1: "●", 2: "×", 3: "○", 4: "✶", 5: "◇", 6: "+" };
@@ -167,7 +172,9 @@
           cell.style.background = shaded ? CONFIG.shadeColor : "#111";
 
           if (cursorVisible && cursor.row === r && cursor.col === c)
-            cell.style.background = CONFIG.cursorColor;
+            cell.classList.add("cursor-outline");
+          else
+            cell.classList.remove("cursor-outline");
 
           if (r === 0) cell.style.borderTop = `2px solid ${CONFIG.borderColor}`;
           if (c === 0) cell.style.borderLeft = `2px solid ${CONFIG.borderColor}`;
@@ -249,6 +256,7 @@
         const shaded = Math.floor(index % CONFIG.steps / CONFIG.shadeGroup) % 2 === 0;
         el.style.background = shaded ? CONFIG.shadeColor : "#111";
         el.style.color = el.textContent ? ROWS[r].color : CONFIG.emptyColor;
+        el.classList.remove("cursor-outline"); // ensure cursor outline is not in export
       });
 
       document.body.appendChild(clone);
